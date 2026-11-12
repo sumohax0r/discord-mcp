@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {Bot} from '../src/bot.js';
+import {Bot,parsePrompt} from '../src/bot.js';
 import {defaults} from '../src/store.js';
+
+test('mentions trigger at any position without matching other bots',()=>{
+  assert.equal(parsePrompt('Hey <@123> help','123','anthropic').text,'Hey help');
+  assert.equal(parsePrompt('Hey <@456> help','123','anthropic'),null);
+});
 
 for(const fails of [false,true])test(`acknowledgment and typing lifecycle, provider failure=${fails}`,async t=>{
   t.mock.timers.enable({apis:['setInterval']});

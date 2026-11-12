@@ -6,7 +6,7 @@ export function allowed(c,guildId,channelId,userId) {
 export function parsePrompt(content,botId,defaultProvider) {
   const command=content.match(/^!(chatgpt|claude|reset)\b\s*([\s\S]*)$/i);
   if(command)return {provider:command[1].toLowerCase()==='claude'?'anthropic':'openai',reset:command[1].toLowerCase()==='reset',text:command[2].trim()};
-  const mention=new RegExp(`^<@!?${botId}>\\s*`);
+  const mention=new RegExp(`<@!?${botId}>\\s*`);
   return mention.test(content)?{provider:defaultProvider,text:content.replace(mention,'').trim()}:null;
 }
 export class Bot {
