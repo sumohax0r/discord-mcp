@@ -1,0 +1,19 @@
+{
+  "name": "wholesome-discord-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "discord.js": "14.28.1",
+    "express": "5.3.0",
+    "zod": "4.6.7"
+  }
+}

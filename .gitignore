@@ -50,3 +50,11 @@ AGENTS.md
 ai-docs/
 issues/
 wiki/
+
+# Node service and private runtime data
+node_modules/
+node-app/data/
+node-app/runtime.json
+node-app/logs/
+node-app/dist/
+*.zip
