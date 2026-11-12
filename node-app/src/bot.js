@@ -12,6 +12,7 @@ export function parsePrompt(content,botId,defaultProvider) {
 export class Bot {
   constructor(store,reply=generate){this.store=store;this.reply=reply;this.client=null;this.status='Not connected';this.conversations=new Map();this.rates=new Map();this.busy=new Set();this.cancelled=new Set();this.active=0;this.connecting=false;this.generation=0;this.cleanup=setInterval(()=>{const now=Date.now();for(const [k,v] of this.conversations)if(now-v.at>1800000)this.conversations.delete(k);for(const [k,v] of this.rates)if(now-v.at>60000)this.rates.delete(k);},60000);this.cleanup.unref();}
   clear(){this.conversations.clear();this.generation++;}
+  async disconnect() {const client=this.client;this.client=null;this.clear();if(client)await client.destroy();this.status='Not connected';}
   async connect() {
     if(this.connecting)throw new Error('A connection attempt is already running.');
     this.connecting=true;

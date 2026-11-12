@@ -7,7 +7,7 @@ export class OAuthProvider {
   constructor(store,origin) {
     this.store=store;this.origin=origin;this.resource=new URL('/mcp',origin).href;this.pending=new Map();this.codes=new Map();
     if(!store.state.oauth)store.state.oauth={clients:{},access:{},refresh:{}};
-    this.clientsStore={getClient:id=>this.db.clients[id],registerClient:async client=>{
+    this.clientsStore={getClient:id=>Object.hasOwn(this.db.clients,id)?this.db.clients[id]:undefined,registerClient:async client=>{
       if(Object.keys(this.db.clients).length>=100)throw new InvalidClientMetadataError('Client registry full. Ask the administrator to revoke connections.');
       if(!['none','client_secret_post'].includes(client.token_endpoint_auth_method??'client_secret_post'))throw new InvalidClientMetadataError('Unsupported authentication method.');
       if(!client.redirect_uris?.length || client.redirect_uris.length>5 || client.redirect_uris.some(u=>{try{const x=new URL(u);return x.protocol!=='https:'||x.username||x.password||x.hash;}catch{return true;}}))throw new InvalidClientMetadataError('Exact HTTPS redirect URIs are required.');

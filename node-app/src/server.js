@@ -64,8 +64,9 @@ export function createApp({store,bot,origin='http://localhost:8090',providerCall
   app.post('/api/logout',(req,res)=>{const raw=(req.headers.cookie||'').match(/(?:^|;\s*)dmcp=([A-Za-z0-9_-]+)/)?.[1];sessions.delete(raw);res.setHeader('Set-Cookie','dmcp=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');res.json({ok:true});});
   app.get('/api/status',(_req,res)=>res.json({bot:bot.status,botName:bot.client?.user?.tag||null,usage:store.state.usage,activeRequests:bot.active,origin,mcpUrl:new URL('/mcp',origin).href}));
   app.get('/api/config',(_req,res)=>res.json(store.publicConfig()));
-  app.post('/api/config',(req,res)=>{
-    try{store.update(req.body.config,req.body.secrets,req.body.clear);bot.clear();res.json(store.publicConfig());}
+  app.post('/api/config',async(req,res)=>{
+    if(bot.connecting)return fail(res,'Wait for the Discord connection attempt to finish.',409);
+    try{const previousToken=store.state.secrets.discordToken;store.update(req.body.config,req.body.secrets,req.body.clear);bot.clear();if(previousToken!==store.state.secrets.discordToken)await bot.disconnect();res.json(store.publicConfig());}
     catch(e){fail(res,e instanceof z.ZodError?'Invalid settings: '+e.issues.map(x=>x.message).join(' '):'Invalid settings or credentials.');}
   });
   app.post('/api/connect',throttle('connect',3),async(_req,res)=>{try{await bot.connect();res.json({status:bot.status});}catch{fail(res,bot.status);}});
