@@ -1,5 +1,27 @@
 import { Client, GatewayIntentBits, Events, PermissionFlagsBits } from 'discord.js';
 import { generate } from './providers.js';
+export function splitReply(text,limit=1900) {
+  const chunks=[];
+  while(text.length>limit){
+    const window=text.slice(0,limit+1);
+    let end=window.lastIndexOf('\n\n',limit-2);
+    if(end>0)end+=2;
+    else {
+      end=window.lastIndexOf('\n',limit-1);
+      if(end>0)end++;
+      else {
+        end=window.lastIndexOf(' ',limit-1);
+        if(end>0)end++;
+        else end=limit;
+      }
+    }
+    // Never split a UTF-16 surrogate pair (for example an emoji).
+    if(/[\uD800-\uDBFF]/.test(text[end-1]))end--;
+    chunks.push(text.slice(0,end));text=text.slice(end);
+  }
+  if(text)chunks.push(text);
+  return chunks;
+}
 export function allowed(c,guildId,channelId,userId) {
   return c.enabled && guildId===c.guildId && c.channelIds.includes(channelId) && (c.allowEveryone||c.userIds.includes(userId));
 }
@@ -93,10 +115,10 @@ export class Bot {
       const response=await this.reply(parsed.provider,c,this.store.state.secrets,messages);
       if(this.cancelled.has(key)||generation!==this.generation||!allowed(this.store.state.config,m.guildId,m.channelId,m.author.id))return;
       if(this.conversations.size>=500)this.conversations.delete(this.conversations.keys().next().value);
-      this.conversations.set(key,{at:Date.now(),messages:[...messages,{role:'assistant',content:response.slice(0,6000)}].slice(-8)});
+      this.conversations.set(key,{at:Date.now(),messages:[...messages,{role:'assistant',content:response}].slice(-8)});
       const label=parsed.provider==='openai'?'ChatGPT':'Claude';
-      const chunks=(`${label}\n${response}`).match(/[\s\S]{1,1900}/g)||[];
-      for(const chunk of chunks)await safeReply(chunk);
+      const chunks=splitReply(`${label}\n${response}`);
+      for(const chunk of chunks){if(!stillAllowed())break;await safeReply(chunk);}
     }catch(e){const safe=/^(OpenAI|Anthropic|Daily AI|This provider|The provider)/.test(e.message)?e.message:'The AI request failed. Check connection and provider settings.';await safeReply(safe);}
     finally {clearInterval(typingTimer);this.active--;this.busy.delete(key);this.cancelled.delete(key);}
   }
