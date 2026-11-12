@@ -96,6 +96,8 @@ export class Bot {
     rate.count++;this.rates.set(m.author.id,rate);
     this.busy.add(key);this.active++;
     const generation=this.generation;
+    const botUserId=this.client.user.id;
+    let acknowledgment;
     let typingTimer;
     let typingPending=false;
     const stillAllowed=()=>!this.cancelled.has(key)&&generation===this.generation&&allowed(this.store.state.config,m.guildId,m.channelId,m.author.id);
@@ -109,7 +111,7 @@ export class Bot {
       this.store.reserveRequest();
       const history=this.conversations.get(key)?.messages||[];
       const messages=[...history.slice(-8),{role:'user',content:parsed.text}];
-      await Promise.all([showTyping(),(async()=>{try{await m.react('👀');}catch{await safeReply('I saw your message and am working on a reply.');}})()]);
+      await Promise.all([showTyping(),(async()=>{try{acknowledgment=await m.react('👀');}catch{await safeReply('I saw your message and am working on a reply.');}})()]);
       typingTimer=setInterval(()=>{void showTyping();},8000);
       typingTimer.unref();
       const response=await this.reply(parsed.provider,c,this.store.state.secrets,messages);
@@ -120,6 +122,10 @@ export class Bot {
       const chunks=splitReply(`${label}\n${response}`);
       for(const chunk of chunks){if(!stillAllowed())break;await safeReply(chunk);}
     }catch(e){const safe=/^(OpenAI|Anthropic|Daily AI|This provider|The provider)/.test(e.message)?e.message:'The AI request failed. Check connection and provider settings.';await safeReply(safe);}
-    finally {clearInterval(typingTimer);this.active--;this.busy.delete(key);this.cancelled.delete(key);}
+    finally {
+      clearInterval(typingTimer);this.active--;this.busy.delete(key);this.cancelled.delete(key);
+      // Remove only our own reaction, including when a request fails or is cancelled.
+      try{await acknowledgment?.users.remove(botUserId);}catch{}
+    }
   }
 }

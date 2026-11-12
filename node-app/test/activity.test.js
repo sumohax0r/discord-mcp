@@ -12,12 +12,13 @@ for(const fails of [false,true])test(`acknowledgment and typing lifecycle, provi
   t.mock.timers.enable({apis:['setInterval']});
   const store={state:{config:{...defaults,enabled:true,guildId:'guild',channelIds:['channel'],allowEveryone:true},secrets:{anthropicKey:'test'}},reserveRequest(){}};
   let finish,typing=0;
-  const reactions=[],replies=[];
-  const bot=new Bot(store,()=>new Promise((resolve,reject)=>{finish=()=>fails?reject(new Error('Anthropic unavailable')):resolve('Hello');}));
+  const reactions=[],replies=[],removed=[];
+  const bot=new Bot(store,()=>new Promise((resolve,reject)=>{finish=()=>fails?reject(new Error('Anthropic unavailable')):resolve('Hello '.repeat(170)+'\n\n'+'World '.repeat(170));}));
   bot.client={user:{id:'bot'}};
-  const pending=bot.onMessage({guildId:'guild',channelId:'channel',content:'!claude hello',author:{id:'user',bot:false},channel:{sendTyping:async()=>{typing++;}},react:async emoji=>reactions.push(emoji),reply:async body=>replies.push(body.content)});
+  const pending=bot.onMessage({guildId:'guild',channelId:'channel',content:'!claude hello',author:{id:'user',bot:false},channel:{sendTyping:async()=>{typing++;}},react:async emoji=>{reactions.push(emoji);return {users:{remove:async id=>{assert.equal(replies.length,fails?1:2);removed.push(id);}}};},reply:async body=>replies.push(body.content)});
   await new Promise(r=>setImmediate(r));
   assert.deepEqual(reactions,['👀']);
+  assert.deepEqual(removed,[]);
   assert.equal(typing,1);
   t.mock.timers.tick(8000);
   await new Promise(r=>setImmediate(r));
@@ -25,7 +26,8 @@ for(const fails of [false,true])test(`acknowledgment and typing lifecycle, provi
   finish();await pending;
   t.mock.timers.tick(16000);
   assert.equal(typing,2);
-  assert.equal(replies.length,1);
+  assert.equal(replies.length,fails?1:2);
+  assert.deepEqual(removed,['bot']);
   assert.match(replies[0],fails?/Anthropic unavailable/:/Hello/);
   clearInterval(bot.cleanup);
 });
